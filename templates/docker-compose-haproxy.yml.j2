@@ -1,0 +1,11 @@
+
+HA:
+  image: janeczku/alpine-haproxy:1.7
+  container_name: haproxy
+  ports:
+    - "80:80"
+    - "443:443"
+    - "8080:8080"
+  volumes:
+    - /etc/haproxy:/etc/haproxy
+    - /etc/ssl:/etc/ssl

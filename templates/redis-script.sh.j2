@@ -1,0 +1,4 @@
+#/bin/bash
+docker exec -d redis redis-cli SET mykey "Hello World"
+docker exec -d redis redis-cli EXPIRE mykey 5
+docker exec -d redis redis-cli TTL mykey

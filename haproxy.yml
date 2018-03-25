@@ -1,0 +1,43 @@
+---
+- hosts: haproxy
+  become: yes
+  become_user: root
+  tasks:
+  - name: Add docker repo
+    template: src=docker.repo.j2 dest=/etc/yum.repos.d/docker.repo
+  - name: Install Docker
+    yum: name=docker-ce state=latest
+  - name: Starting docker 
+    service: name=docker state=started enabled=yes
+  - name: Install epel-release
+    yum: name=epel-release state=latest
+  - name: Installing dependencies
+    yum: name=python-pip state=latest
+  - name: Installing docker compose
+    pip:
+      name: docker-compose
+      state: present  
+  - name: Create /etc/haproxy
+    command: mkdir /etc/haproxy
+  - name: Transfer over docker-compose.yml file
+    template: src=docker-compose-haproxy.yml.j2 dest=/usr/local/src/docker-compose.yml
+  - name: Start containers from docker-compose file
+    shell: docker-compose up -d
+    args:
+      chdir: /usr/local/src  
+  - name: Configure HAproxy
+    template: src=haproxy.cfg.j2 dest=/etc/haproxy/haproxy.cfg
+  - name: Upload cerificate in pem file
+    template: src=comprigo-tzidanic.tk.pem.j2 dest=/etc/ssl/comprigo-tzidanic.tk.pem
+  - name: Upload LetsEncrypt root certificate
+    template: src=letsencrypt.pem.j2 dest=/etc/ssl/letsencrypt.pem
+  - name: Upload website certificate
+    template: src=comprigo-tzidanic.tk.crt.j2 dest=/etc/ssl/comprigo-tzidanic.tk.crt
+  - name: Upload OCSP stapling script
+    template: src=ocsp.sh.j2 dest=/etc/ssl/ocsp.sh mode=0755
+  - name: Setup cronjob to run OCSP script
+    cron: minute=20 name=Send_ocsp_status_to_haproxy cron_file=ocsp-status user=root job=/etc/ssl/ocsp.sh
+  - name: Apply configuration
+    shell: docker restart haproxy
+    args:
+      executable: /bin/bash
